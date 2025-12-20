@@ -1,5 +1,5 @@
 /* Rawana Shoes - Offline SW */
-const CACHE_NAME = "rawana-shoes-v1";
+const CACHE_NAME = "rawana-shoes-v3";
 const ASSETS = [
   "./",
   "./index.html",
