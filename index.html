@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>روانا شوز — نظام محاسبة ومخزن</title>
+  <meta name="theme-color" content="#2b7bff"/>
+  <link rel="manifest" href="./manifest.webmanifest"/>
+
+  <style>
+    :root{
+      --blue:#2b7bff; --soft:#eaf3ff; --line:#e5e7eb; --card:#fff;
+      --danger:#dc3545; --ok:#16a34a; --muted:#64748b;
+      --shadow:0 10px 28px rgba(2,6,23,.08);
+      --r:16px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:Tajawal,Segoe UI,Tahoma,Arial,sans-serif;background:var(--soft);color:#0f172a}
+
+    header{
+      position:sticky;top:0;z-index:50;
+      background:var(--blue);color:#fff;
+      padding:12px 14px 0;
+    }
+    header .top{
+      display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+      padding-bottom:10px;
+    }
+    header h1{margin:0;font-size:16px;font-weight:900}
+    header .sub{opacity:.9;font-size:12px;line-height:1.6}
+
+    /* ✅ تبويبات ثابتة ومضمونة */
+    #tabs{
+      display:flex !important;
+      gap:8px !important;
+      width:100% !important;
+      overflow-x:auto !important;
+      -webkit-overflow-scrolling:touch !important;
+      padding:8px 0 12px !important;
+    }
+    #tabs .tab{
+      flex:0 0 auto !important;
+      background:rgba(255,255,255,.16) !important;
+      border:1px solid rgba(255,255,255,.25) !important;
+      color:#fff !important;
+      padding:9px 12px !important;
+      border-radius:999px !important;
+      font-weight:900 !important;
+      font-size:13px !important;
+      white-space:nowrap !important;
+      cursor:pointer !important;
+    }
+    #tabs .tab.active{background:#fff !important;color:var(--blue) !important;}
+
+    .wrap{max-width:1100px;margin:0 auto;padding:12px}
+    .kpi{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
+    @media(min-width:900px){.kpi{grid-template-columns:repeat(4,1fr)}}
+    .kpi .box{background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px;box-shadow:var(--shadow)}
+    .kpi .t{font-size:12px;color:var(--muted);font-weight:900}
+    .kpi .v{font-size:16px;font-weight:900;margin-top:6px}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+
+    .grid{display:grid;gap:12px}
+    @media(min-width:900px){ .grid.cols2{grid-template-columns:1.2fr .8fr} }
+
+    .card{
+      background:var(--card);border:1px solid var(--line);
+      border-radius:var(--r);box-shadow:var(--shadow);padding:12px
+    }
+    .card h2{margin:0 0 10px;font-size:15px;font-weight:900}
+
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .field{display:flex;flex-direction:column;gap:6px;min-width:160px;flex:1}
+    .field label{font-size:12px;color:var(--muted);font-weight:900}
+
+    input,select,textarea{
+      padding:10px;border:1px solid var(--line);border-radius:12px;
+      background:#fff;font-size:14px;outline:none
+    }
+    textarea{min-height:70px;resize:vertical}
+    input:focus,select:focus,textarea:focus{border-color:rgba(43,123,255,.65);box-shadow:0 0 0 3px rgba(43,123,255,.14)}
+
+    .btn{
+      border:1px solid var(--line);
+      background:#fff;padding:10px 12px;border-radius:12px;
+      cursor:pointer;font-weight:900;font-size:13px
+    }
+    .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+    .btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+    .btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+    .btn:active{transform:scale(.99)}
+
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid var(--line);font-size:13px;text-align:right;vertical-align:top}
+    th{font-size:12px;color:var(--muted);font-weight:900}
+    .pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);padding:8px 10px;border-radius:999px;background:#fff}
+    .badge{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:22px;padding:0 8px;border-radius:999px;background:#fff;color:var(--blue);font-weight:900}
+    .divider{height:1px;background:var(--line);margin:10px 0}
+    .hint{font-size:12px;color:var(--muted);line-height:1.6}
+
+    /* ✅ صفحات التبويبات */
+    .page{display:none}
+    .page.active{display:block}
+
+    .toast{
+      position:fixed;bottom:14px;left:14px;right:14px;max-width:520px;margin:0 auto;
+      background:#0f172a;color:#fff;padding:10px 12px;border-radius:14px;
+      display:none;box-shadow:0 14px 40px rgba(2,6,23,.25);z-index:99;font-size:13px
+    }
+  </style>
+</head>
+
+<body>
+<header>
+  <div class="top">
+    <div>
+      <h1>روانا شوز — نظام محاسبة ومخزن</h1>
+      <div class="sub">أوفلاين • كاش + بنك • تقارير يومية/شهرية • مرتجعات/تبديل مبسّط • العملة ₪</div>
+    </div>
+    <div class="pill" style="background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.25);color:#fff">
+      الحالة: <b id="netState">...</b>
+    </div>
+  </div>
+
+  <div id="tabs">
+    <button class="tab active" type="button" data-page="pos">مبيعات</button>
+    <button class="tab" type="button" data-page="stock">المخزن</button>
+    <button class="tab" type="button" data-page="exp">مصروفات</button>
+    <button class="tab" type="button" data-page="cash">الصندوق</button>
+    <button class="tab" type="button" data-page="rep">تقارير</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="kpi" id="kpi"></div>
+
+  <!-- ===== مبيعات ===== -->
+  <section class="page active" id="page-pos">
+    <div class="grid cols2">
+      <div class="card">
+        <h2>شاشة المبيعات</h2>
+        <div class="row">
+          <div class="field" style="min-width:260px">
+            <label>اختر الصنف</label>
+            <select id="posProduct"></select>
+          </div>
+          <div class="field" style="max-width:140px">
+            <label>الكمية</label>
+            <input id="posQty" type="number" min="1" value="1"/>
+          </div>
+          <div class="field" style="max-width:180px">
+            <label>سعر البيع (اختياري)</label>
+            <input id="posPrice" type="number" step="0.01" min="0" placeholder="اتركه لسعر الصنف"/>
+          </div>
+          <button class="btn ok" id="btnAddCart">إضافة للسلة</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row" style="justify-content:space-between">
+          <div class="pill">السلة <span class="badge" id="cartCount">0</span></div>
+          <button class="btn danger" id="btnClearCart">مسح السلة</button>
+        </div>
+
+        <div style="margin-top:10px;overflow:auto">
+          <table>
+            <thead><tr><th>الصنف</th><th>كمية</th><th>سعر</th><th>الإجمالي</th><th></th></tr></thead>
+            <tbody id="cartBody"></tbody>
+          </table>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row">
+          <div class="field" style="max-width:200px">
+            <label>طريقة الدفع</label>
+            <select id="payMethod">
+              <option value="cash">كاش</option>
+              <option value="bank">بنك</option>
+            </select>
+          </div>
+          <div class="field" style="max-width:200px">
+            <label>خصم (اختياري)</label>
+            <input id="discount" type="number" min="0" step="0.01" value="0"/>
+          </div>
+        </div>
+        <div class="field">
+          <label>ملاحظات (اختياري)</label>
+          <textarea id="posNote" placeholder="مثال: زبون دائم / حذاء رجالي..."></textarea>
+        </div>
+
+        <div class="row" style="justify-content:space-between;margin-top:10px">
+          <div class="pill">الإجمالي <b class="mono" id="posTotal">₪ 0.00</b></div>
+          <button class="btn primary" id="btnCheckout">تسجيل البيع</button>
+        </div>
+
+        <div class="hint" style="margin-top:10px">سيتم خصم الكمية من المخزن وإضافة المبلغ للصندوق حسب كاش/بنك.</div>
+      </div>
+
+      <div class="card">
+        <h2>الفواتير + مرتجع/تبديل (مبسّط)</h2>
+        <div class="row">
+          <div class="field">
+            <label>اختر فاتورة</label>
+            <select id="invSelect"></select>
+          </div>
+          <button class="btn" id="btnInvDetails">تفاصيل</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row">
+          <div class="field" style="max-width:220px">
+            <label>نوع العملية</label>
+            <select id="retType">
+              <option value="return">مرتجع (المحل يرجّع مبلغ)</option>
+              <option value="exchangePlus">تبديل (الزبون يدفع فرق)</option>
+              <option value="exchangeMinus">تبديل (المحل يرجّع فرق)</option>
+            </select>
+          </div>
+          <div class="field" style="max-width:220px">
+            <label>الدفع</label>
+            <select id="retPay">
+              <option value="cash">كاش</option>
+              <option value="bank">بنك</option>
+            </select>
+          </div>
+          <div class="field" style="max-width:220px">
+            <label>المبلغ</label>
+            <input id="retAmount" type="number" min="0" step="0.01" value="0"/>
+          </div>
+        </div>
+        <div class="field">
+          <label>ملاحظات</label>
+          <textarea id="retNote" placeholder="اختياري"></textarea>
+        </div>
+        <button class="btn primary" id="btnApplyReturn">تسجيل العملية</button>
+
+        <div class="divider"></div>
+
+        <h2 style="font-size:14px;margin:0 0 8px">آخر 20 فاتورة</h2>
+        <div style="overflow:auto;max-height:420px">
+          <table>
+            <thead><tr><th>رقم</th><th>تاريخ</th><th>دفع</th><th>صافي</th><th>ملاحظات</th></tr></thead>
+            <tbody id="invBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== المخزن ===== -->
+  <section class="page" id="page-stock">
+    <div class="grid cols2">
+      <div class="card">
+        <h2>إضافة / تعديل صنف</h2>
+        <div class="row">
+          <div class="field">
+            <label>اسم الصنف</label>
+            <input id="pName" placeholder="مثال: حذاء رجالي جلد"/>
+          </div>
+          <div class="field" style="max-width:160px">
+            <label>الكمية</label>
+            <input id="pQty" type="number" min="0" value="0"/>
+          </div>
+          <div class="field" style="max-width:160px">
+            <label>سعر الشراء</label>
+            <input id="pBuy" type="number" min="0" step="0.01" value="0"/>
+          </div>
+          <div class="field" style="max-width:160px">
+            <label>سعر البيع</label>
+            <input id="pSell" type="number" min="0" step="0.01" value="0"/>
+          </div>
+          <button class="btn primary" id="btnSaveProduct">حفظ</button>
+        </div>
+        <div class="hint" style="margin-top:8px">لتعديل صنف: اكتب نفس الاسم ثم عدّل القيم واضغط حفظ.</div>
+      </div>
+
+      <div class="card">
+        <h2>قائمة الأصناف</h2>
+        <div class="row">
+          <div class="field">
+            <label>بحث</label>
+            <input id="pSearch" placeholder="اكتب جزء من الاسم..."/>
+          </div>
+          <button class="btn" id="btnBackup">نسخ نسخة احتياط (JSON)</button>
+          <button class="btn danger" id="btnReset">مسح كل البيانات</button>
+        </div>
+
+        <div style="margin-top:10px;overflow:auto;max-height:520px">
+          <table>
+            <thead><tr><th>الصنف</th><th>كمية</th><th>شراء</th><th>بيع</th><th></th></tr></thead>
+            <tbody id="pBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== المصروفات ===== -->
+  <section class="page" id="page-exp">
+    <div class="grid cols2">
+      <div class="card">
+        <h2>تسجيل مصروف</h2>
+        <div class="row">
+          <div class="field">
+            <label>البند</label>
+            <input id="eTitle" placeholder="مثال: إيجار / كهرباء"/>
+          </div>
+          <div class="field" style="max-width:200px">
+            <label>المبلغ</label>
+            <input id="eAmount" type="number" min="0" step="0.01" value="0"/>
+          </div>
+          <div class="field" style="max-width:200px">
+            <label>الدفع</label>
+            <select id="ePay">
+              <option value="cash">كاش</option>
+              <option value="bank">بنك</option>
+            </select>
+          </div>
+          <button class="btn primary" id="btnAddExp">تسجيل</button>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <label>ملاحظات</label>
+          <textarea id="eNote" placeholder="اختياري"></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>آخر المصروفات</h2>
+        <div style="overflow:auto;max-height:520px">
+          <table>
+            <thead><tr><th>تاريخ</th><th>بند</th><th>دفع</th><th>مبلغ</th><th>ملاحظات</th><th></th></tr></thead>
+            <tbody id="eBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== الصندوق ===== -->
+  <section class="page" id="page-cash">
+    <div class="grid cols2">
+      <div class="card">
+        <h2>الصندوق</h2>
+        <div class="row">
+          <div class="pill" style="flex:1;justify-content:space-between"><span>الكاش</span><b class="mono" id="cashBal">₪ 0.00</b></div>
+          <div class="pill" style="flex:1;justify-content:space-between"><span>البنك</span><b class="mono" id="bankBal">₪ 0.00</b></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <h2 style="font-size:14px;margin:0 0 8px">تحويل بين كاش وبنك</h2>
+        <div class="row">
+          <div class="field" style="max-width:200px">
+            <label>من</label>
+            <select id="trFrom">
+              <option value="cash">كاش</option>
+              <option value="bank">بنك</option>
+            </select>
+          </div>
+          <div class="field" style="max-width:200px">
+            <label>إلى</label>
+            <select id="trTo">
+              <option value="bank">بنك</option>
+              <option value="cash">كاش</option>
+            </select>
+          </div>
+          <div class="field" style="max-width:220px">
+            <label>المبلغ</label>
+            <input id="trAmount" type="number" min="0" step="0.01" value="0"/>
+          </div>
+          <button class="btn primary" id="btnTransfer">تنفيذ</button>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <label>ملاحظة</label>
+          <textarea id="trNote" placeholder="اختياري"></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>سجل الحركات (آخر 80)</h2>
+        <div style="overflow:auto;max-height:520px">
+          <table>
+            <thead><tr><th>تاريخ</th><th>نوع</th><th>دفع</th><th>مبلغ</th><th>ملاحظات</th></tr></thead>
+            <tbody id="txBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== التقارير ===== -->
+  <section class="page" id="page-rep">
+    <div class="card">
+      <h2>التقارير اليومية / الشهرية</h2>
+      <div class="row">
+        <div class="field" style="max-width:220px">
+          <label>تقرير يوم</label>
+          <input id="repDay" type="date"/>
+        </div>
+        <button class="btn primary" id="btnDay">عرض اليوم</button>
+
+        <div class="field" style="max-width:220px">
+          <label>تقرير شهر</label>
+          <input id="repMonth" type="month"/>
+        </div>
+        <button class="btn primary" id="btnMonth">عرض الشهر</button>
+
+        <button class="btn" id="btnPrint">طباعة</button>
+      </div>
+
+      <div class="divider"></div>
+      <div class="card" style="box-shadow:none;border-radius:16px;border:1px dashed var(--line)" id="reportOut">
+        <div class="hint">اختر يوم أو شهر لعرض التقرير.</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ======================
+   Tabs Engine (مضمون)
+====================== */
+(function(){
+  const tabs = [...document.querySelectorAll("#tabs .tab")];
+  const map = {
+    pos: document.getElementById("page-pos"),
+    stock: document.getElementById("page-stock"),
+    exp: document.getElementById("page-exp"),
+    cash: document.getElementById("page-cash"),
+    rep: document.getElementById("page-rep")
+  };
+
+  function show(key){
+    Object.values(map).forEach(p=>p.classList.remove("active"));
+    map[key].classList.add("active");
+    tabs.forEach(b=>b.classList.remove("active"));
+    const btn = tabs.find(b=>b.dataset.page===key);
+    if(btn) btn.classList.add("active");
+    try{ refresh(); }catch(e){}
+  }
+
+  tabs.forEach(b=> b.addEventListener("click", ()=> show(b.dataset.page)));
+  show("pos");
+})();
+
+/* ======================
+   أدوات عامة
+====================== */
+const KEY = "rawana_shoes_final_v1";
+const fmt = n => "₪ " + (Number(n||0)).toFixed(2);
+const nowISO = () => new Date().toISOString();
+const dKey = iso => iso.slice(0,10);
+const mKey = iso => iso.slice(0,7);
+const esc = s => String(s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+const rid = () => Math.random().toString(16).slice(2)+Date.now().toString(16);
+
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.display = "block";
+  clearTimeout(toast._tm);
+  toast._tm = setTimeout(()=> t.style.display="none", 2000);
+}
+
+function load(){
+  const raw = localStorage.getItem(KEY);
+  if(raw) return JSON.parse(raw);
+  const db = {
+    seq:{inv:1000},
+    cashbox:{cash:0, bank:0},
+    products:[],
+    invoices:[],
+    expenses:[],
+    tx:[]
+  };
+  localStorage.setItem(KEY, JSON.stringify(db));
+  return db;
+}
+function save(){ localStorage.setItem(KEY, JSON.stringify(db)); }
+let db = load();
+
+/* ======================
+   مخزن
+====================== */
+function fillProducts(){
+  const sel = document.getElementById("posProduct");
+  sel.innerHTML = "";
+  if(db.products.length===0){
+    const o = document.createElement("option");
+    o.value = "";
+    o.textContent = "لا يوجد أصناف - أضف من المخزن";
+    sel.appendChild(o);
+    return;
+  }
+  db.products.slice().sort((a,b)=>a.name.localeCompare(b.name,'ar')).forEach(p=>{
+    const o = document.createElement("option");
+    o.value = p.id;
+    o.textContent = `${p.name} (متوفر: ${p.qty}) - بيع: ${fmt(p.sell)}`;
+    sel.appendChild(o);
+  });
+}
+
+function renderProducts(){
+  const q = (pSearch.value||"").trim();
+  const list = db.products
+    .filter(p=> !q || p.name.includes(q))
+    .slice()
+    .sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+
+  pBody.innerHTML = list.map(p=>`
+    <tr>
+      <td>${esc(p.name)}</td>
+      <td class="mono">${Number(p.qty||0)}</td>
+      <td class="mono">${fmt(p.buy)}</td>
+      <td class="mono">${fmt(p.sell)}</td>
+      <td>
+        <button class="btn" onclick="editP('${p.id}')">تعديل</button>
+        <button class="btn danger" onclick="delP('${p.id}')">حذف</button>
+      </td>
+    </tr>
+  `).join("") || `<tr><td colspan="5" class="hint">لا يوجد أصناف.</td></tr>`;
+}
+window.editP = (id)=>{
+  const p = db.products.find(x=>x.id===id); if(!p) return;
+  pName.value=p.name; pQty.value=p.qty; pBuy.value=p.buy; pSell.value=p.sell;
+  toast("عدّل واضغط حفظ");
+};
+window.delP = (id)=>{
+  if(!confirm("حذف الصنف؟")) return;
+  db.products = db.products.filter(x=>x.id!==id);
+  save(); refresh(); toast("تم الحذف");
+};
+
+function saveProduct(){
+  const name=(pName.value||"").trim();
+  const qty=Number(pQty.value||0);
+  const buy=Number(pBuy.value||0);
+  const sell=Number(pSell.value||0);
+  if(!name){ toast("اكتب اسم الصنف"); return; }
+
+  let p = db.products.find(x=>x.name===name);
+  if(!p){
+    db.products.push({id:rid(), name, qty, buy, sell});
+    toast("تمت الإضافة");
+  }else{
+    p.qty=qty; p.buy=buy; p.sell=sell;
+    toast("تم التحديث");
+  }
+  pName.value=""; pQty.value=0; pBuy.value=0; pSell.value=0;
+  save(); refresh();
+}
+
+/* ======================
+   مبيعات
+====================== */
+let cart = [];
+function cartSum(){
+  const sum = cart.reduce((s,it)=> s + it.qty*it.price, 0);
+  const disc = Number(discount.value||0);
+  retu
