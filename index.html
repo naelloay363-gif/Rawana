@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+_toggle
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>روانا شوز</title>
+
+<style>
+*{box-sizing:border-box;font-family:tahoma}
+body{margin:0;background:#f2f4f7}
+header{background:#2f80ed;color:#fff;padding:12px;text-align:center}
+#tabs{display:flex;gap:6px;padding:8px;overflow-x:auto;background:#2f80ed}
+.tab{padding:8px 14px;background:#ffffff55;border-radius:18px;color:#fff;font-size:14px;cursor:pointer}
+.tab.active{background:#fff;color:#2f80ed;font-weight:bold}
+.section{display:none;padding:10px}
+.section.active{display:block}
+.card{background:#fff;padding:12px;border-radius:14px;margin-bottom:10px}
+input,select,button,textarea{
+  width:100%;padding:10px;margin-top:6px;
+  font-size:15px;border-radius:10px;border:1px solid #ccc
+}
+textarea{resize:none}
+button{background:#2f80ed;color:#fff;border:none;font-weight:bold}
+.green{background:#27ae60}
+.red{background:#eb5757}
+.gray{background:#555}
+.row{display:flex;gap:6px}
+.row>*{flex:1}
+small{color:#666}
+hr{border:none;border-top:1px solid #eee;margin:10px 0}
+</style>
+</head>
+
+<body>
+
+<header>
+<h3>روانا شوز</h3>
+<small>نظام محاسبة ومخزن – شيكل ₪</small>
+</header>
+
+<div id="tabs">
+  <div class="tab active" onclick="show('sales',this)">مبيعات</div>
+  <div class="tab" onclick="show('stock',this)">المخزن</div>
+  <div class="tab" onclick="show('expenses',this)">مصروفات</div>
+  <div class="tab" onclick="show('cashbox',this)">الصندوق</div>
+  <div class="tab" onclick="show('reports',this)">تقارير</div>
+</div>
+
+<!-- المبيعات -->
+<div id="sales" class="section active">
+<div class="card">
+<h4>بيع</h4>
+<select id="saleItem"></select>
+<div class="row">
+<input type="number" id="saleQty" placeholder="الكمية" value="1">
+<input type="number" id="salePrice" placeholder="السعر (اختياري)">
+</div>
+<select id="salePay">
+<option value="cash">كاش</option>
+<option value="bank">بنك</option>
+</select>
+<textarea id="saleNote" placeholder="ملاحظات (اختياري)"></textarea>
+<button class="green" onclick="addSale()">تنفيذ البيع</button>
+</div>
+</div>
+
+<!-- المخزن -->
+<div id="stock" class="section">
+<div class="card">
+<h4>إضافة صنف</h4>
+<input id="itemName" placeholder="اسم الصنف">
+<input type="number" id="itemQty" placeholder="الكمية">
+<input type="number" id="itemPrice" placeholder="سعر البيع">
+<button onclick="addItem()">حفظ</button>
+</div>
+</div>
+
+<!-- المصروفات -->
+<div id="expenses" class="section">
+<div class="card">
+<h4>مصروف</h4>
+<input id="expName" placeholder="السبب">
+<input type="number" id="expAmount" placeholder="المبلغ">
+<select id="expPay">
+<option value="cash">كاش</option>
+<option value="bank">بنك</option>
+</select>
+<textarea id="expNote" placeholder="ملاحظات (اختياري)"></textarea>
+<button class="red" onclick="addExpense()">تسجيل المصروف</button>
+</div>
+</div>
+
+<!-- الصندوق -->
+<div id="cashbox" class="section">
+<div class="card">
+<h4>الصندوق</h4>
+<p>💵 كاش: ₪ <b id="cashTotal">0</b></p>
+<p>🏦 بنك: ₪ <b id="bankTotal">0</b></p>
+</div>
+</div>
+
+<!-- التقارير -->
+<div id="reports" class="section">
+<div class="card">
+<h4>تقارير</h4>
+
+<input type="date" id="repDate">
+<button onclick="dailyReport()">تقرير يومي</button>
+
+<hr>
+
+<input type="month" id="repMonth">
+<button onclick="monthlyReport()">تقرير شهري</button>
+
+<hr>
+
+<div id="repResult"></div>
+
+<button onclick="printPDF()">📄 حفظ PDF</button>
+</div>
+</div>
+
+<script>
+let stock = JSON.parse(localStorage.stock||"[]");
+let sales = JSON.parse(localStorage.sales||"[]");
+let expenses = JSON.parse(localStorage.expenses||"[]");
+let cash = +localStorage.cash||0;
+let bank = +localStorage.bank||0;
+
+function save(){
+ localStorage.stock=JSON.stringify(stock);
+ localStorage.sales=JSON.stringify(sales);
+ localStorage.expenses=JSON.stringify(expenses);
+ localStorage.cash=cash;
+ localStorage.bank=bank;
+ load();
+}
+
+function show(id,el){
+ document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+ el.classList.add('active');
+}
+
+function load(){
+ let s=document.getElementById("saleItem");
+ s.innerHTML="";
+ stock.forEach((i,n)=>{
+  s.innerHTML+=`<option value="${n}">${i.name} (${i.qty})</option>`;
+ });
+ cashTotal.innerText=cash;
+ bankTotal.innerText=bank;
+}
+
+function addItem(){
+ if(!itemName.value)return alert("أدخل اسم الصنف");
+ stock.push({name:itemName.value,qty:+itemQty.value,price:+itemPrice.value});
+ save(); alert("تم حفظ الصنف");
+}
+
+function addSale(){
+ let i=stock[saleItem.value];
+ let q=+saleQty.value;
+ let p=salePrice.value||i.price;
+ if(i.qty<q)return alert("الكمية غير كافية");
+ i.qty-=q;
+ let total=q*p;
+ if(salePay.value=="cash") cash+=total; else bank+=total;
+ sales.push({name:i.name,qty:q,price:p,pay:salePay.value,note:saleNote.value,date:new Date().toISOString().slice(0,10)});
+ save(); alert("تم البيع");
+}
+
+function addExpense(){
+ let a=+expAmount.value;
+ if(expPay.value=="cash") cash-=a; else bank-=a;
+ expenses.push({name:expName.value,amount:a,pay:expPay.value,note:expNote.value,date:new Date().toISOString().slice(0,10)});
+ save(); alert("تم تسجيل المصروف");
+}
+
+function dailyReport(){
+ let d=repDate.value;
+ let s=sales.filter(x=>x.date==d).reduce((t,x)=>t+x.qty*x.price,0);
+ let e=expenses.filter(x=>x.date==d).reduce((t,x)=>t+x.amount,0);
+ repResult.innerHTML=`📅 ${d}<br>مبيعات: ₪ ${s}<br>مصروفات: ₪ ${e}<br>الصافي: ₪ ${s-e}`;
+}
+
+function monthlyReport(){
+ let m=repMonth.value;
+ let s=sales.filter(x=>x.date.startsWith(m)).reduce((t,x)=>t+x.qty*x.price,0);
+ let e=expenses.filter(x=>x.date.startsWith(m)).reduce((t,x)=>t+x.amount,0);
+ repResult.innerHTML=`📆 ${m}<br>مبيعات: ₪ ${s}<br>مصروفات: ₪ ${e}<br>الصافي: ₪ ${s-e}`;
+}
+
+function printPDF(){
+ let w=window.open("");
+ w.document.write("<h3>تقرير روانا شوز</h3>");
+ w.document.write(repResult.innerHTML);
+ w.print();
+}
+
+load();
+</script>
+
+</body>
+  </html>
