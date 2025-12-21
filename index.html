@@ -202,6 +202,44 @@ function printPDF(){
 
 load();
 </script>
+<!-- Backup -->
+<script>
+function exportBackup(){
+  const data={
+    stock,
+    sales,
+    expenses,
+    cash,
+    bank
+  };
+  const blob=new Blob([JSON.stringify(data)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="rawana_backup.json";
+  a.click();
+}
 
+function importBackup(file){
+  const r=new FileReader();
+  r.onload=()=>{
+    const d=JSON.parse(r.result);
+    stock=d.stock||[];
+    sales=d.sales||[];
+    expenses=d.expenses||[];
+    cash=d.cash||0;
+    bank=d.bank||0;
+    save();
+    alert("تم استيراد النسخة بنجاح");
+  };
+  r.readAsText(file);
+}
+</script>
+
+<!-- Service Worker Register -->
+<script>
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js");
+}
+</script>
 </body>
   </html>
